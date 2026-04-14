@@ -1,0 +1,30 @@
+<?php
+include "database.php";
+
+// 1. Retrieve data from ESP32 or Simulator (Ensure POST variable names match the device code)
+if(isset($_POST['temperature']) && isset($_POST['humidity']) && isset($_POST['device_name'])) {
+
+    $temp = $_POST['temperature'];
+    $humi = $_POST['humidity'];
+    $device = $_POST['device_name'];
+
+    // 2. QUERY: Insert data into the table
+    // Using PDO prepared statements for security against SQL Injection
+    $sql = "INSERT INTO sensor_data (temperature, humidity, device_name) VALUES (:temperature, :humidity, :device_name)";
+
+    try {
+        $stmt = $conn->prepare($sql);
+        $stmt->bindParam(':temperature', $temp);
+        $stmt->bindParam(':humidity', $humi);
+        $stmt->bindParam(':device_name', $device);
+        
+        $stmt->execute();
+        echo "SUCCESS! Data inserted successfully into the database.";
+    } catch (PDOException $e) {
+        echo "DATABASE ERROR: " . $e->getMessage();
+    }
+
+} else {
+    echo "INCOMPLETE DATA: Ensure the ESP32 or Simulator is sending temperature, humidity, and device_name variables.";
+}
+?>

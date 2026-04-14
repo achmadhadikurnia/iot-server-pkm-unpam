@@ -1,0 +1,16 @@
+# Matikan fitur index directory (mencegah orang melihat isi folder)
+Options -Indexes
+
+# Blokir akses ke direktori yang diawali dengan titik dan file terkait
+<FilesMatch "^\.">
+    Require all denied
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Mencegah database.php diakses secara langsung dari browser
+<FilesMatch "^database\.php$">
+    Require all denied
+    Order allow,deny
+    Deny from all
+</FilesMatch>
