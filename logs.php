@@ -94,7 +94,8 @@ try {
 }
 
 // ── Helper: build query string preserving current params ────────────
-function buildQS(array $overrides = []): string {
+function buildQS(array $overrides = []): string
+{
     $params = $_GET;
     foreach ($overrides as $k => $v) {
         if ($v === null) {
@@ -239,9 +240,11 @@ $has_filters = $filter_device !== '' || $filter_temp_min !== null || $filter_tem
                             <span class="badge bg-info filter-badge ms-2">Filtered</span>
                         <?php endif; ?>
                     </h4>
+                    <p class="text-white-50 mb-0 small" style="margin-top:2px">Auto-refresh in <span id="countdown">30</span>s...</p>
                 </div>
                 <div class="d-flex gap-2 align-items-center">
                     <?php if (!isset($error)): ?>
+                        <button onclick="window.location.reload()" class="btn btn-outline-primary btn-sm fw-bold">🔄 Refresh</button>
                         <button class="btn btn-outline-warning btn-sm fw-bold btn-filter-toggle" type="button"
                             data-bs-toggle="collapse" data-bs-target="#filterPanel" aria-expanded="<?= $has_filters ? 'true' : 'false' ?>">
                             <i class="bi bi-funnel"></i> Filter &amp; Sort
@@ -496,6 +499,20 @@ $has_filters = $filter_device !== '' || $filter_temp_min !== null || $filter_tem
                 });
             }
         });
+
+        // Auto refresh countdown mechanism
+        let timeLeft = 30;
+        const countdownEl = document.getElementById('countdown');
+        if (countdownEl) {
+            const refreshTimer = setInterval(function() {
+                timeLeft--;
+                countdownEl.innerText = Math.max(0, timeLeft);
+                if (timeLeft <= 0) {
+                    clearInterval(refreshTimer);
+                    window.location.reload();
+                }
+            }, 1000);
+        }
     </script>
 </body>
 
