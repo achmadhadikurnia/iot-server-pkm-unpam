@@ -100,7 +100,7 @@ try {
                                             <td><span class="badge bg-primary rounded-pill"><?= htmlspecialchars($row['device_name']) ?></span></td>
                                             <td class="text-danger fw-bold"><?= htmlspecialchars($row['temperature']) ?> °C</td>
                                             <td class="text-info fw-bold"><?= htmlspecialchars($row['humidity']) ?> %</td>
-                                            <td class="text-muted"><small><?= htmlspecialchars(date('d M Y, H:i', strtotime($row['created_at']))) ?></small></td>
+                                            <td class="text-muted"><small><?= htmlspecialchars(date('d M Y, H:i:s', strtotime($row['created_at']))) ?></small></td>
                                         </tr>
                                     <?php endforeach; ?>
                                 <?php else: ?>
