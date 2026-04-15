@@ -1,41 +1,81 @@
 <?php
-include "database.php";
+session_start();
 
-$status = [
-    'env_exists'   => $db_env_exists,
-    'db_connected' => ($conn !== null),
-    'table_exists' => false,
-    'error'        => $db_error,
-    'migrated'     => false
-];
+// ── Auth credentials: from .env or defaults ───────────────────────
+$envFile = __DIR__ . '/.env';
+$setupUser = 'admin';
+$setupPass = 'password';
+if (file_exists($envFile)) {
+    $envVars = parse_ini_file($envFile);
+    if (!empty($envVars['SETUP_USER'])) $setupUser = $envVars['SETUP_USER'];
+    if (!empty($envVars['SETUP_PASS'])) $setupPass = $envVars['SETUP_PASS'];
+}
 
-if ($conn) {
-    try {
-        // Handle migration request
-        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['migrate'])) {
-            $sql = "CREATE TABLE IF NOT EXISTS sensor_data (
-                id SERIAL PRIMARY KEY,
-                temperature NUMERIC(5,2) NOT NULL,
-                humidity NUMERIC(5,2) NOT NULL,
-                device_name VARCHAR(100) NOT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )";
-            $conn->exec($sql);
-            $status['migrated'] = true;
+// ── Handle logout ─────────────────────────────────────────────────
+if (isset($_GET['logout'])) {
+    unset($_SESSION['setup_authenticated']);
+    header('Location: setup.php');
+    exit;
+}
+
+// ── Handle login POST ─────────────────────────────────────────────
+$login_error = null;
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
+    $inputUser = $_POST['username'] ?? '';
+    $inputPass = $_POST['password'] ?? '';
+    if ($inputUser === $setupUser && $inputPass === $setupPass) {
+        $_SESSION['setup_authenticated'] = true;
+        header('Location: setup.php');
+        exit;
+    } else {
+        $login_error = 'Invalid username or password.';
+    }
+}
+
+// ── Check authentication ──────────────────────────────────────────
+$is_authenticated = !empty($_SESSION['setup_authenticated']);
+
+// ── Only run diagnostic if authenticated ──────────────────────────
+$status = null;
+if ($is_authenticated) {
+    include "database.php";
+
+    $status = [
+        'env_exists'   => $db_env_exists,
+        'db_connected' => ($conn !== null),
+        'table_exists' => false,
+        'error'        => $db_error,
+        'migrated'     => false
+    ];
+
+    if ($conn) {
+        try {
+            // Handle migration request
+            if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['migrate'])) {
+                $sql = "CREATE TABLE IF NOT EXISTS sensor_data (
+                    id SERIAL PRIMARY KEY,
+                    temperature NUMERIC(5,2) NOT NULL,
+                    humidity NUMERIC(5,2) NOT NULL,
+                    device_name VARCHAR(100) NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )";
+                $conn->exec($sql);
+                $status['migrated'] = true;
+            }
+
+            // Check if table exists
+            $stmt = $conn->query("SELECT EXISTS (
+                SELECT FROM information_schema.tables
+                WHERE table_schema = 'public'
+                AND table_name = 'sensor_data'
+            );");
+
+            if ($stmt->fetchColumn()) {
+                $status['table_exists'] = true;
+            }
+        } catch (PDOException $e) {
+            $status['error'] = $e->getMessage();
         }
-
-        // Check if table exists
-        $stmt = $conn->query("SELECT EXISTS (
-            SELECT FROM information_schema.tables
-            WHERE table_schema = 'public'
-            AND table_name = 'sensor_data'
-        );");
-
-        if ($stmt->fetchColumn()) {
-            $status['table_exists'] = true;
-        }
-    } catch (PDOException $e) {
-        $status['error'] = $e->getMessage();
     }
 }
 ?>
@@ -87,65 +127,105 @@ if ($conn) {
                 style="border-start-start-radius: 15px; border-start-end-radius: 15px; padding: 1rem 1.5rem;">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <h4 class="mb-0">System Diagnostic & Migration</h4>
-                        <small class="text-white-50">Supabase Postgres Connection Test</small>
+                        <h4 class="mb-0"><?= $is_authenticated ? 'System Diagnostic & Migration' : 'Setup Login' ?></h4>
+                        <small class="text-white-50"><?= $is_authenticated ? 'Supabase Postgres Connection Test' : 'Authentication Required' ?></small>
                     </div>
+                    <?php if ($is_authenticated): ?>
+                        <a href="?logout" class="btn btn-outline-danger btn-sm fw-bold">
+                            <i class="bi bi-box-arrow-right"></i> Logout
+                        </a>
+                    <?php endif; ?>
                 </div>
             </div>
             <div class="card-body p-4">
 
-                <?php if ($status['error']): ?>
-                    <div class="alert alert-danger">
-                        <strong>Connection Error:</strong> <br>
-                        <?= htmlspecialchars($status['error']) ?>
-                    </div>
-                <?php endif; ?>
-
-                <?php if ($status['migrated']): ?>
-                    <div class="alert alert-success">
-                        <strong>Migration Successful!</strong> The 'sensor_data' table has been created.
-                    </div>
-                <?php endif; ?>
-
-                <ul class="list-group mb-4">
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span><i class="bi bi-file-earmark-text me-2 text-muted"></i> Environment File (.env)</span>
-                        <?php if ($status['env_exists']): ?>
-                            <i class="bi bi-check-circle-fill status-icon text-success"></i>
-                        <?php else: ?>
-                            <i class="bi bi-x-circle-fill status-icon text-danger"></i>
-                        <?php endif; ?>
-                    </li>
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span><i class="bi bi-database me-2 text-muted"></i> Database Connection (PostgreSQL)</span>
-                        <?php if ($status['db_connected']): ?>
-                            <i class="bi bi-check-circle-fill status-icon text-success"></i>
-                        <?php else: ?>
-                            <i class="bi bi-x-circle-fill status-icon text-danger"></i>
-                        <?php endif; ?>
-                    </li>
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <span><i class="bi bi-table me-2 text-muted"></i> Table 'sensor_data'</span>
-                        <?php if ($status['table_exists']): ?>
-                            <i class="bi bi-check-circle-fill status-icon text-success"></i>
-                        <?php else: ?>
-                            <i class="bi bi-exclamation-circle-fill status-icon text-warning"></i>
-                        <?php endif; ?>
-                    </li>
-                </ul>
-
-                <div class="d-grid gap-2">
-                    <?php if ($status['db_connected'] && !$status['table_exists']): ?>
-                        <form method="POST" class="d-grid">
-                            <button type="submit" name="migrate" value="1" class="btn btn-warning fw-bold">Run Database Migration Now</button>
-                        </form>
-                    <?php elseif ($status['table_exists']): ?>
-                        <button class="btn btn-success fw-bold disabled">System is Ready to Use</button>
-                    <?php else: ?>
-                        <button class="btn btn-secondary fw-bold disabled">Please Fix Errors Above First</button>
+                <?php if (!$is_authenticated): ?>
+                    <!-- ── Login Form ──────────────────────────────── -->
+                    <?php if ($login_error): ?>
+                        <div class="alert alert-danger">
+                            <i class="bi bi-exclamation-triangle me-1"></i>
+                            <?= htmlspecialchars($login_error) ?>
+                        </div>
                     <?php endif; ?>
-                    <a href="index.php" class="btn btn-outline-primary mt-2">⬅️ Back to Dashboard</a>
-                </div>
+
+                    <form method="POST">
+                        <div class="mb-3">
+                            <label for="username" class="form-label fw-bold">
+                                <i class="bi bi-person me-1"></i> Username
+                            </label>
+                            <input type="text" class="form-control" id="username" name="username"
+                                placeholder="Enter username" required autofocus>
+                        </div>
+                        <div class="mb-3">
+                            <label for="password" class="form-label fw-bold">
+                                <i class="bi bi-lock me-1"></i> Password
+                            </label>
+                            <input type="password" class="form-control" id="password" name="password"
+                                placeholder="Enter password" required>
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button type="submit" name="login" value="1" class="btn btn-primary fw-bold">
+                                <i class="bi bi-box-arrow-in-right me-1"></i> Login
+                            </button>
+                            <a href="index.php" class="btn btn-outline-secondary">⬅️ Back to Dashboard</a>
+                        </div>
+                    </form>
+
+                <?php else: ?>
+                    <!-- ── Diagnostic Content ──────────────────────── -->
+                    <?php if ($status['error']): ?>
+                        <div class="alert alert-danger">
+                            <strong>Connection Error:</strong> <br>
+                            <?= htmlspecialchars($status['error']) ?>
+                        </div>
+                    <?php endif; ?>
+
+                    <?php if ($status['migrated']): ?>
+                        <div class="alert alert-success">
+                            <strong>Migration Successful!</strong> The 'sensor_data' table has been created.
+                        </div>
+                    <?php endif; ?>
+
+                    <ul class="list-group mb-4">
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span><i class="bi bi-file-earmark-text me-2 text-muted"></i> Environment File (.env)</span>
+                            <?php if ($status['env_exists']): ?>
+                                <i class="bi bi-check-circle-fill status-icon text-success"></i>
+                            <?php else: ?>
+                                <i class="bi bi-x-circle-fill status-icon text-danger"></i>
+                            <?php endif; ?>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span><i class="bi bi-database me-2 text-muted"></i> Database Connection (PostgreSQL)</span>
+                            <?php if ($status['db_connected']): ?>
+                                <i class="bi bi-check-circle-fill status-icon text-success"></i>
+                            <?php else: ?>
+                                <i class="bi bi-x-circle-fill status-icon text-danger"></i>
+                            <?php endif; ?>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span><i class="bi bi-table me-2 text-muted"></i> Table 'sensor_data'</span>
+                            <?php if ($status['table_exists']): ?>
+                                <i class="bi bi-check-circle-fill status-icon text-success"></i>
+                            <?php else: ?>
+                                <i class="bi bi-exclamation-circle-fill status-icon text-warning"></i>
+                            <?php endif; ?>
+                        </li>
+                    </ul>
+
+                    <div class="d-grid gap-2">
+                        <?php if ($status['db_connected'] && !$status['table_exists']): ?>
+                            <form method="POST" class="d-grid">
+                                <button type="submit" name="migrate" value="1" class="btn btn-warning fw-bold">Run Database Migration Now</button>
+                            </form>
+                        <?php elseif ($status['table_exists']): ?>
+                            <button class="btn btn-success fw-bold disabled">System is Ready to Use</button>
+                        <?php else: ?>
+                            <button class="btn btn-secondary fw-bold disabled">Please Fix Errors Above First</button>
+                        <?php endif; ?>
+                        <a href="index.php" class="btn btn-outline-primary mt-2">⬅️ Back to Dashboard</a>
+                    </div>
+                <?php endif; ?>
 
             </div>
         </div>
