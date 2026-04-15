@@ -30,125 +30,136 @@ try {
     $selected_devices = [];
     if (isset($_GET['devices']) && $_GET['devices'] !== '') {
         $selected_devices = explode(',', $_GET['devices']);
-        // Validate
-        $selected_devices = array_intersect($selected_devices, $all_devices);
+        // Validate and re-index to prevent PDO from complaining about non-sequential keys
+        $selected_devices = array_values(array_intersect($selected_devices, $all_devices));
     }
     if (empty($selected_devices)) {
-        $selected_devices = $all_devices;
+        $selected_devices = array_values($all_devices);
     }
 
-    // Build device WHERE clause
-    $device_placeholders = implode(',', array_fill(0, count($selected_devices), '?'));
-    $device_where = "device_name IN ($device_placeholders)";
-
-    // Highest Temp within selected range & devices
-    $stmtTemp = $conn->prepare("SELECT device_name, temperature, created_at FROM sensor_data WHERE created_at >= NOW() - INTERVAL '$interval' AND $device_where ORDER BY temperature DESC LIMIT 1");
-    $stmtTemp->execute($selected_devices);
-    $rowTemp = $stmtTemp->fetch(PDO::FETCH_ASSOC);
-    $highest_temp = $rowTemp ? (float)$rowTemp['temperature'] : 0;
-    $highest_temp_time_utc = $rowTemp ? date('c', strtotime($rowTemp['created_at'])) : '';
-    $highest_temp_device = $rowTemp ? $rowTemp['device_name'] : '-';
-
-    // Highest Humidity within selected range & devices
-    $stmtHum = $conn->prepare("SELECT device_name, humidity, created_at FROM sensor_data WHERE created_at >= NOW() - INTERVAL '$interval' AND $device_where ORDER BY humidity DESC LIMIT 1");
-    $stmtHum->execute($selected_devices);
-    $rowHum = $stmtHum->fetch(PDO::FETCH_ASSOC);
-    $highest_hum = $rowHum ? (float)$rowHum['humidity'] : 0;
-    $highest_hum_time_utc = $rowHum ? date('c', strtotime($rowHum['created_at'])) : '';
-    $highest_hum_device = $rowHum ? $rowHum['device_name'] : '-';
-
-    // Trend Data with aggregation strategy per device
-    if ($range === '12h') {
-        $query = "SELECT
-            device_name,
-            date_trunc('hour', created_at) + INTERVAL '30 min' * FLOOR(EXTRACT(MINUTE FROM created_at) / 30) AS period,
-            ROUND(AVG(temperature)::numeric, 2) AS temperature,
-            ROUND(AVG(humidity)::numeric, 2) AS humidity
-            FROM sensor_data
-            WHERE created_at >= NOW() - INTERVAL '12 hours' AND $device_where
-            GROUP BY device_name, period
-            ORDER BY period ASC";
-    } elseif ($range === '24h') {
-        $query = "SELECT
-            device_name,
-            date_trunc('hour', created_at) AS period,
-            ROUND(AVG(temperature)::numeric, 2) AS temperature,
-            ROUND(AVG(humidity)::numeric, 2) AS humidity
-            FROM sensor_data
-            WHERE created_at >= NOW() - INTERVAL '1 day' AND $device_where
-            GROUP BY device_name, period
-            ORDER BY period ASC";
-    } elseif ($range === '7d') {
-        $query = "SELECT
-            device_name,
-            date_trunc('hour', created_at) - (EXTRACT(HOUR FROM created_at)::int % 6) * INTERVAL '1 hour' AS period,
-            ROUND(AVG(temperature)::numeric, 2) AS temperature,
-            ROUND(AVG(humidity)::numeric, 2) AS humidity
-            FROM sensor_data
-            WHERE created_at >= NOW() - INTERVAL '7 days' AND $device_where
-            GROUP BY device_name, period
-            ORDER BY period ASC";
-    } else {
-        // Raw data for 1h, 6h
-        $query = "SELECT device_name, created_at AS period, temperature, humidity
-            FROM sensor_data
-            WHERE created_at >= NOW() - INTERVAL '$interval' AND $device_where
-            ORDER BY created_at ASC
-            LIMIT 5000";
-    }
-
-    $stmtCharts = $conn->prepare($query);
-    $stmtCharts->execute($selected_devices);
-    $raw_data = $stmtCharts->fetchAll(PDO::FETCH_ASSOC);
-
-    // Organize data per device
-    $devices_data = [];
-    $all_timestamps = [];
-
-    foreach ($raw_data as $row) {
-        $device = $row['device_name'];
-        $ts = strtotime($row['period']);
-
-        if ($range === '7d') {
-            $label = date('d M H:i', $ts);
-        } elseif (in_array($range, ['12h', '24h'])) {
-            $label = date('H:i', $ts);
-        } else {
-            $label = date('H:i:s', $ts);
-        }
-
-        if (!isset($devices_data[$device])) {
-            $devices_data[$device] = [];
-        }
-        $devices_data[$device][$label] = [
-            'temp' => (float)$row['temperature'],
-            'hum' => (float)$row['humidity'],
-        ];
-        $all_timestamps[$label] = $ts;
-    }
-
-    // Sort timestamps
-    asort($all_timestamps);
-    $sorted_labels = array_keys($all_timestamps);
-
-    // Build final chart arrays per device (fill gaps with null for smooth lines)
+    // Default Fallback
+    $highest_temp_time_utc = '';
+    $highest_temp_device = '-';
+    $highest_hum_time_utc = '';
+    $highest_hum_device = '-';
+    $sorted_labels = [];
     $chart_series = [];
-    foreach ($devices_data as $device => $data) {
-        $temps = [];
-        $hums = [];
-        foreach ($sorted_labels as $label) {
-            if (isset($data[$label])) {
-                $temps[] = $data[$label]['temp'];
-                $hums[] = $data[$label]['hum'];
-            } else {
-                $temps[] = null;
-                $hums[] = null;
-            }
+    $raw_data = [];
+    $devices_data = [];
+
+    if (!empty($selected_devices)) {
+        // Build device WHERE clause
+        $device_placeholders = implode(',', array_fill(0, count($selected_devices), '?'));
+        $device_where = "device_name IN ($device_placeholders)";
+
+        // Highest Temp within selected range & devices
+        $stmtTemp = $conn->prepare("SELECT device_name, temperature, created_at FROM sensor_data WHERE created_at >= NOW() - INTERVAL '$interval' AND $device_where ORDER BY temperature DESC LIMIT 1");
+        $stmtTemp->execute($selected_devices);
+        $rowTemp = $stmtTemp->fetch(PDO::FETCH_ASSOC);
+        $highest_temp = $rowTemp ? (float)$rowTemp['temperature'] : 0;
+        $highest_temp_time_utc = $rowTemp ? date('c', strtotime($rowTemp['created_at'])) : '';
+        $highest_temp_device = $rowTemp ? $rowTemp['device_name'] : '-';
+
+        // Highest Humidity within selected range & devices
+        $stmtHum = $conn->prepare("SELECT device_name, humidity, created_at FROM sensor_data WHERE created_at >= NOW() - INTERVAL '$interval' AND $device_where ORDER BY humidity DESC LIMIT 1");
+        $stmtHum->execute($selected_devices);
+        $rowHum = $stmtHum->fetch(PDO::FETCH_ASSOC);
+        $highest_hum = $rowHum ? (float)$rowHum['humidity'] : 0;
+        $highest_hum_time_utc = $rowHum ? date('c', strtotime($rowHum['created_at'])) : '';
+        $highest_hum_device = $rowHum ? $rowHum['device_name'] : '-';
+
+        // Trend Data with aggregation strategy per device
+        if ($range === '12h') {
+            $query = "SELECT
+                device_name,
+                date_trunc('hour', created_at) + INTERVAL '30 min' * FLOOR(EXTRACT(MINUTE FROM created_at) / 30) AS period,
+                ROUND(AVG(temperature)::numeric, 2) AS temperature,
+                ROUND(AVG(humidity)::numeric, 2) AS humidity
+                FROM sensor_data
+                WHERE created_at >= NOW() - INTERVAL '12 hours' AND $device_where
+                GROUP BY device_name, period
+                ORDER BY period ASC";
+        } elseif ($range === '24h') {
+            $query = "SELECT
+                device_name,
+                date_trunc('hour', created_at) AS period,
+                ROUND(AVG(temperature)::numeric, 2) AS temperature,
+                ROUND(AVG(humidity)::numeric, 2) AS humidity
+                FROM sensor_data
+                WHERE created_at >= NOW() - INTERVAL '1 day' AND $device_where
+                GROUP BY device_name, period
+                ORDER BY period ASC";
+        } elseif ($range === '7d') {
+            $query = "SELECT
+                device_name,
+                date_trunc('hour', created_at) - (EXTRACT(HOUR FROM created_at)::int % 6) * INTERVAL '1 hour' AS period,
+                ROUND(AVG(temperature)::numeric, 2) AS temperature,
+                ROUND(AVG(humidity)::numeric, 2) AS humidity
+                FROM sensor_data
+                WHERE created_at >= NOW() - INTERVAL '7 days' AND $device_where
+                GROUP BY device_name, period
+                ORDER BY period ASC";
+        } else {
+            // Raw data for 1h, 6h
+            $query = "SELECT device_name, created_at AS period, temperature, humidity
+                FROM sensor_data
+                WHERE created_at >= NOW() - INTERVAL '$interval' AND $device_where
+                ORDER BY created_at ASC
+                LIMIT 5000";
         }
-        $chart_series[$device] = [
-            'temps' => $temps,
-            'hums' => $hums,
-        ];
+
+        $stmtCharts = $conn->prepare($query);
+        $stmtCharts->execute($selected_devices);
+        $raw_data = $stmtCharts->fetchAll(PDO::FETCH_ASSOC);
+
+        // Organize data per device
+        $devices_data = [];
+        $all_timestamps = [];
+
+        foreach ($raw_data as $row) {
+            $device = $row['device_name'];
+            $ts = strtotime($row['period']);
+
+            if ($range === '7d') {
+                $label = date('d M H:i', $ts);
+            } elseif (in_array($range, ['12h', '24h'])) {
+                $label = date('H:i', $ts);
+            } else {
+                $label = date('H:i:s', $ts);
+            }
+
+            if (!isset($devices_data[$device])) {
+                $devices_data[$device] = [];
+            }
+            $devices_data[$device][$label] = [
+                'temp' => (float)$row['temperature'],
+                'hum' => (float)$row['humidity'],
+            ];
+            $all_timestamps[$label] = $ts;
+        }
+
+        // Sort timestamps
+        asort($all_timestamps);
+        $sorted_labels = array_keys($all_timestamps);
+
+        // Build final chart arrays per device (fill gaps with null for smooth lines)
+        foreach ($devices_data as $device => $data) {
+            $temps = [];
+            $hums = [];
+            foreach ($sorted_labels as $label) {
+                if (isset($data[$label])) {
+                    $temps[] = $data[$label]['temp'];
+                    $hums[] = $data[$label]['hum'];
+                } else {
+                    $temps[] = null;
+                    $hums[] = null;
+                }
+            }
+            $chart_series[$device] = [
+                'temps' => $temps,
+                'hums' => $hums,
+            ];
+        }
     }
 } catch (PDOException $e) {
     if (strpos($e->getMessage(), 'relation "sensor_data" does not exist') !== false || strpos($e->getMessage(), "Table 'sensor_data' doesn't exist") !== false) {

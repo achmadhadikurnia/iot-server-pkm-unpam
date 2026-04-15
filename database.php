@@ -25,7 +25,11 @@ if (file_exists($envFile)) {
     $dsn = "pgsql:host=$host;port=$port;dbname=$db";
 
     try {
-        $conn = new PDO($dsn, $user, $pass, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+        $conn = new PDO($dsn, $user, $pass, [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_TIMEOUT => 5, // Fail fast within 5 seconds if host is unreachable
+            PDO::ATTR_EMULATE_PREPARES => true // Required for Supabase PgBouncer (Port 6543)
+        ]);
     } catch (PDOException $e) {
         $db_error = $e->getMessage();
     }

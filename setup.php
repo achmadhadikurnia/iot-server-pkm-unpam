@@ -38,6 +38,21 @@ $is_authenticated = !empty($_SESSION['setup_authenticated']);
 // ── Only run diagnostic if authenticated ──────────────────────────
 $status = null;
 if ($is_authenticated) {
+    $env_created = false;
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_env'])) {
+        $envExample = __DIR__ . '/.env.example';
+        if (file_exists($envExample) && !file_exists($envFile)) {
+            copy($envExample, $envFile);
+            $env_created = true;
+        }
+    }
+
+    $env_saved = false;
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_env'])) {
+        file_put_contents($envFile, $_POST['env_content']);
+        $env_saved = true;
+    }
+
     include "database.php";
 
     $status = [
@@ -186,45 +201,78 @@ if ($is_authenticated) {
                         </div>
                     <?php endif; ?>
 
-                    <ul class="list-group mb-4">
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            <span><i class="bi bi-file-earmark-text me-2 text-muted"></i> Environment File (.env)</span>
-                            <?php if ($status['env_exists']): ?>
-                                <i class="bi bi-check-circle-fill status-icon text-success"></i>
-                            <?php else: ?>
-                                <i class="bi bi-x-circle-fill status-icon text-danger"></i>
-                            <?php endif; ?>
-                        </li>
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            <span><i class="bi bi-database me-2 text-muted"></i> Database Connection (PostgreSQL)</span>
-                            <?php if ($status['db_connected']): ?>
-                                <i class="bi bi-check-circle-fill status-icon text-success"></i>
-                            <?php else: ?>
-                                <i class="bi bi-x-circle-fill status-icon text-danger"></i>
-                            <?php endif; ?>
-                        </li>
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            <span><i class="bi bi-table me-2 text-muted"></i> Table 'sensor_data'</span>
-                            <?php if ($status['table_exists']): ?>
-                                <i class="bi bi-check-circle-fill status-icon text-success"></i>
-                            <?php else: ?>
-                                <i class="bi bi-exclamation-circle-fill status-icon text-warning"></i>
-                            <?php endif; ?>
-                        </li>
-                    </ul>
+                    <?php if (isset($env_created) && $env_created): ?>
+                        <div class="alert alert-success mt-3">
+                            <strong>Success!</strong> Created .env file from .env.example. Please edit it with your database credentials.
+                        </div>
+                    <?php endif; ?>
 
-                    <div class="d-grid gap-2">
-                        <?php if ($status['db_connected'] && !$status['table_exists']): ?>
-                            <form method="POST" class="d-grid">
-                                <button type="submit" name="migrate" value="1" class="btn btn-warning fw-bold">Run Database Migration Now</button>
+                    <?php if (isset($env_saved) && $env_saved): ?>
+                        <div class="alert alert-success mt-3">
+                            <strong>Success!</strong> Configuration saved to .env file.
+                        </div>
+                    <?php endif; ?>
+
+                    <?php if (isset($_GET['edit_env']) && $status['env_exists']): ?>
+                        <div class="mb-4 mt-3">
+                            <h5 class="fw-bold"><i class="bi bi-pencil-square me-1"></i> Edit .env Configuration</h5>
+                            <form method="POST" action="setup.php">
+                                <textarea name="env_content" class="form-control mb-3" rows="6" style="font-family: monospace;" required><?= htmlspecialchars(file_get_contents($envFile)) ?></textarea>
+                                <div class="d-flex gap-2">
+                                    <button type="submit" name="save_env" value="1" class="btn btn-primary fw-bold"><i class="bi bi-save"></i> Save Changes</button>
+                                    <a href="setup.php" class="btn btn-outline-secondary fw-bold">Cancel</a>
+                                </div>
                             </form>
-                        <?php elseif ($status['table_exists']): ?>
-                            <button class="btn btn-success fw-bold disabled">System is Ready to Use</button>
-                        <?php else: ?>
-                            <button class="btn btn-secondary fw-bold disabled">Please Fix Errors Above First</button>
-                        <?php endif; ?>
-                        <a href="index.php" class="btn btn-outline-primary mt-2">⬅️ Back to Dashboard</a>
-                    </div>
+                        </div>
+                    <?php else: ?>
+                        <ul class="list-group mb-4">
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span><i class="bi bi-file-earmark-text me-2 text-muted"></i> Environment File (.env)
+                                    <?php if (!$status['env_exists']): ?>
+                                        <form method="POST" class="d-inline ms-2">
+                                            <button type="submit" name="create_env" value="1" class="btn btn-sm btn-outline-primary py-0" style="font-size: 0.75rem;">Create from .env.example</button>
+                                        </form>
+                                    <?php else: ?>
+                                        <a href="?edit_env=1" class="btn btn-sm btn-outline-secondary py-0 ms-2" style="font-size: 0.75rem;"><i class="bi bi-pencil"></i> Edit</a>
+                                    <?php endif; ?>
+                                </span>
+                                <?php if ($status['env_exists']): ?>
+                                    <i class="bi bi-check-circle-fill status-icon text-success"></i>
+                                <?php else: ?>
+                                    <i class="bi bi-x-circle-fill status-icon text-danger"></i>
+                                <?php endif; ?>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span><i class="bi bi-database me-2 text-muted"></i> Database Connection (PostgreSQL)</span>
+                                <?php if ($status['db_connected']): ?>
+                                    <i class="bi bi-check-circle-fill status-icon text-success"></i>
+                                <?php else: ?>
+                                    <i class="bi bi-x-circle-fill status-icon text-danger"></i>
+                                <?php endif; ?>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span><i class="bi bi-table me-2 text-muted"></i> Table 'sensor_data'</span>
+                                <?php if ($status['table_exists']): ?>
+                                    <i class="bi bi-check-circle-fill status-icon text-success"></i>
+                                <?php else: ?>
+                                    <i class="bi bi-exclamation-circle-fill status-icon text-warning"></i>
+                                <?php endif; ?>
+                            </li>
+                        </ul>
+
+                        <div class="d-grid gap-2">
+                            <?php if ($status['db_connected'] && !$status['table_exists']): ?>
+                                <form method="POST" class="d-grid">
+                                    <button type="submit" name="migrate" value="1" class="btn btn-warning fw-bold">Run Database Migration Now</button>
+                                </form>
+                            <?php elseif ($status['table_exists']): ?>
+                                <button class="btn btn-success fw-bold disabled">System is Ready to Use</button>
+                            <?php else: ?>
+                                <button class="btn btn-secondary fw-bold disabled">Please Fix Errors Above First</button>
+                            <?php endif; ?>
+                            <a href="index.php" class="btn btn-outline-primary mt-2">⬅️ Back to Dashboard</a>
+                        </div>
+                    <?php endif; ?>
                 <?php endif; ?>
 
             </div>
