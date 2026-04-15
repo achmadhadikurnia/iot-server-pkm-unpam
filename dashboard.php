@@ -54,7 +54,8 @@ try {
                 <p class="mb-0"><small class="text-light">Page <?= $page ?> of <?= $total_pages ?> (Total: <?= isset($total_records) ? $total_records : 0 ?> records)</small></p>
             </div>
             <div>
-                <a href="index.php" class="btn btn-outline-light btn-sm">Return to Simulator</a>
+                <a href="simulator.php" class="btn btn-outline-secondary btn-sm me-1">Simulator</a>
+                <a href="index.php" class="btn btn-outline-light btn-sm">Return to Dashboard</a>
             </div>
         </div>
         <div class="card-body p-0">
