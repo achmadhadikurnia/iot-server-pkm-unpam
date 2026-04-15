@@ -18,11 +18,31 @@ try {
     $highest_hum = $rowHum ? (float)$rowHum['humidity'] : 0;
     $highest_hum_time = $rowHum ? date('d M Y, H:i:s', strtotime($rowHum['created_at'])) : '-';
 
-    // Last 10 records
-    $stmt10 = $conn->query("SELECT * FROM sensor_data ORDER BY id DESC LIMIT 10");
-    $last_10 = $stmt10->fetchAll(PDO::FETCH_ASSOC);
+    // Trend Data Filtering
+    $range = isset($_GET['range']) ? $_GET['range'] : '10r';
     
-    $chart_data = array_reverse($last_10);
+    $query = "SELECT * FROM sensor_data ";
+    if ($range === '1h') {
+        $query .= "WHERE created_at >= NOW() - INTERVAL '1 hour' ";
+    } elseif ($range === '6h') {
+        $query .= "WHERE created_at >= NOW() - INTERVAL '6 hours' ";
+    } elseif ($range === '12h') {
+        $query .= "WHERE created_at >= NOW() - INTERVAL '12 hours' ";
+    } elseif ($range === '24h') {
+        $query .= "WHERE created_at >= NOW() - INTERVAL '1 day' ";
+    }
+    $query .= "ORDER BY id DESC ";
+    
+    if ($range === '10r') {
+        $query .= "LIMIT 10";
+    } else {
+        $query .= "LIMIT 1000"; // Batasan safety agar browser tidak crash jika data terlalu banyak
+    }
+
+    $stmtCharts = $conn->query($query);
+    $last_records = $stmtCharts->fetchAll(PDO::FETCH_ASSOC);
+    
+    $chart_data = array_reverse($last_records);
 } catch (PDOException $e) {
     if (strpos($e->getMessage(), 'relation "sensor_data" does not exist') !== false || strpos($e->getMessage(), "Table 'sensor_data' doesn't exist") !== false) {
         $error = "Table 'sensor_data' does not exist yet. Please run migration in Setup.";
@@ -34,7 +54,7 @@ try {
 $chart_timestamps = [];
 $chart_temps = [];
 $chart_hums = [];
-$table_data = $last_10; 
+$table_data = $last_records; 
 
 if (!isset($error)) {
     foreach ($chart_data as $row) {
@@ -123,12 +143,26 @@ if (!isset($error)) {
         </div>
     </div>
 
+    <!-- Trend Analysis Header with Filter -->
+    <div class="d-flex justify-content-between align-items-end mb-3 mt-5">
+        <h4 class="fw-bold mb-0">Trend Analysis</h4>
+        <form method="GET" class="d-flex">
+            <select name="range" class="form-select form-select-sm fw-bold border-secondary shadow-sm" style="width: auto; cursor: pointer;" onchange="this.form.submit()">
+                <option value="10r" <?= $range === '10r' ? 'selected' : '' ?>>Last 10 Records</option>
+                <option value="1h" <?= $range === '1h' ? 'selected' : '' ?>>Last 1 Hour</option>
+                <option value="6h" <?= $range === '6h' ? 'selected' : '' ?>>Last 6 Hours</option>
+                <option value="12h" <?= $range === '12h' ? 'selected' : '' ?>>Last 12 Hours</option>
+                <option value="24h" <?= $range === '24h' ? 'selected' : '' ?>>Last 24 Hours</option>
+            </select>
+        </form>
+    </div>
+
     <!-- Second Row: Line Charts & Data Tables -->
     <div class="row mb-4">
         <!-- Temperature Column -->
         <div class="col-xl-6 mb-4 mb-xl-0">
             <div class="widget-card">
-                <h5 class="fw-bold text-danger mb-3">Temperature Trend (Last 10)</h5>
+                <h5 class="fw-bold text-danger mb-3">Temperature Trend</h5>
                 <div id="lineTemp" class="chart-container"></div>
                 <hr class="my-4">
                 <h6 class="fw-bold text-secondary mb-3">Recent Temperature Data</h6>
@@ -159,7 +193,7 @@ if (!isset($error)) {
         <!-- Humidity Column -->
         <div class="col-xl-6">
             <div class="widget-card">
-                <h5 class="fw-bold text-info mb-3">Humidity Trend (Last 10)</h5>
+                <h5 class="fw-bold text-info mb-3">Humidity Trend</h5>
                 <div id="lineHum" class="chart-container"></div>
                 <hr class="my-4">
                 <h6 class="fw-bold text-secondary mb-3">Recent Humidity Data</h6>
