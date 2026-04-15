@@ -93,7 +93,8 @@ if (!isset($error)) {
             <span class="badge bg-secondary fs-6 align-middle ms-lg-3 mt-2 mt-md-0 fw-normal">Refresh in <span id="countdown">30</span>s</span>
         </h2>
         <div>
-            <a href="simulator.php" class="btn btn-outline-secondary me-2">IoT Simulator</a>
+            <button onclick="window.location.reload()" class="btn btn-success me-2 fw-bold">🔄 Refresh</button>
+            <a href="simulator.php" class="btn btn-outline-secondary me-2 fw-bold">IoT Simulator</a>
             <a href="dashboard.php" class="btn btn-primary fw-bold">View Full Data</a>
         </div>
     </div>
