@@ -7,14 +7,16 @@ $last_10 = [];
 
 try {
     // Highest Temp
-    $stmtTemp = $conn->query("SELECT MAX(temperature) as max_t FROM sensor_data");
+    $stmtTemp = $conn->query("SELECT temperature, created_at FROM sensor_data ORDER BY temperature DESC LIMIT 1");
     $rowTemp = $stmtTemp->fetch(PDO::FETCH_ASSOC);
-    $highest_temp = $rowTemp['max_t'] !== null ? (float)$rowTemp['max_t'] : 0;
+    $highest_temp = $rowTemp ? (float)$rowTemp['temperature'] : 0;
+    $highest_temp_time = $rowTemp ? date('d M Y, H:i:s', strtotime($rowTemp['created_at'])) : '-';
 
     // Highest Hum
-    $stmtHum = $conn->query("SELECT MAX(humidity) as max_h FROM sensor_data");
+    $stmtHum = $conn->query("SELECT humidity, created_at FROM sensor_data ORDER BY humidity DESC LIMIT 1");
     $rowHum = $stmtHum->fetch(PDO::FETCH_ASSOC);
-    $highest_hum = $rowHum['max_h'] !== null ? (float)$rowHum['max_h'] : 0;
+    $highest_hum = $rowHum ? (float)$rowHum['humidity'] : 0;
+    $highest_hum_time = $rowHum ? date('d M Y, H:i:s', strtotime($rowHum['created_at'])) : '-';
 
     // Last 10 records
     $stmt10 = $conn->query("SELECT * FROM sensor_data ORDER BY id DESC LIMIT 10");
@@ -87,7 +89,9 @@ if (!isset($error)) {
 
 <div class="container py-4">
     <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-4 gap-3">
-        <h2 class="mb-0 fw-bold">IoT Sensor Dashboard</h2>
+        <h2 class="mb-0 fw-bold flex-grow-1">IoT Sensor Dashboard 
+            <span class="badge bg-secondary fs-6 align-middle ms-lg-3 mt-2 mt-md-0 fw-normal">Refresh in <span id="countdown">30</span>s</span>
+        </h2>
         <div>
             <a href="simulator.php" class="btn btn-outline-secondary me-2">IoT Simulator</a>
             <a href="dashboard.php" class="btn btn-primary fw-bold">View Full Data</a>
@@ -106,12 +110,14 @@ if (!isset($error)) {
             <div class="widget-card text-center">
                 <h5 class="fw-bold text-danger">Highest Temperature</h5>
                 <div id="gaugeTemp" class="gauge-container"></div>
+                <p class="text-muted small mt-2 mb-0">Recorded on: <strong class="text-dark"><?= $highest_temp_time ?></strong></p>
             </div>
         </div>
         <div class="col-md-6">
             <div class="widget-card text-center">
                 <h5 class="fw-bold text-info">Highest Humidity</h5>
                 <div id="gaugeHum" class="gauge-container"></div>
+                <p class="text-muted small mt-2 mb-0">Recorded on: <strong class="text-dark"><?= $highest_hum_time ?></strong></p>
             </div>
         </div>
     </div>
@@ -288,10 +294,16 @@ if (!isset($error)) {
             lineHumChart.resize();
         });
         
-        // Auto refresh every 10 seconds (optional, but requested for typical dashboards, we'll just reload the page for simplicity or leave it out if they didn't specifically ask. Let's just refresh page every 30 seconds so dashboard is live)
+        // Auto refresh countdown mechanism
+        let timeLeft = 30;
+        const countdownEl = document.getElementById('countdown');
         setInterval(function() {
-            window.location.reload();
-        }, 30000); // 30s
+            timeLeft--;
+            if (countdownEl) countdownEl.innerText = Math.max(0, timeLeft);
+            if (timeLeft <= 0) {
+                window.location.reload();
+            }
+        }, 1000);
     </script>
     <?php endif; ?>
 </div>
