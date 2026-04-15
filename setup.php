@@ -60,11 +60,18 @@ if ($is_authenticated) {
         'db_connected' => ($conn !== null),
         'table_exists' => false,
         'error'        => $db_error,
-        'migrated'     => false
+        'migrated'     => false,
+        'reset'        => false
     ];
 
     if ($conn) {
         try {
+            // Handle reset request
+            if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reset'])) {
+                $conn->exec("TRUNCATE TABLE sensor_data RESTART IDENTITY;");
+                $status['reset'] = true;
+            }
+
             // Handle migration request
             if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['migrate'])) {
                 $sql = "CREATE TABLE IF NOT EXISTS sensor_data (
@@ -201,6 +208,12 @@ if ($is_authenticated) {
                         </div>
                     <?php endif; ?>
 
+                    <?php if ($status['reset']): ?>
+                        <div class="alert alert-success">
+                            <strong>Data Reset Successful!</strong> All sensor data has been deleted.
+                        </div>
+                    <?php endif; ?>
+
                     <?php if (isset($env_created) && $env_created): ?>
                         <div class="alert alert-success mt-3">
                             <strong>Success!</strong> Created .env file from .env.example. Please edit it with your database credentials.
@@ -267,6 +280,9 @@ if ($is_authenticated) {
                                 </form>
                             <?php elseif ($status['table_exists']): ?>
                                 <button class="btn btn-success fw-bold disabled">System is Ready to Use</button>
+                                <form method="POST" class="d-grid mt-2" onsubmit="return confirm('Are you sure you want to delete all sensor data? This action cannot be undone.');">
+                                    <button type="submit" name="reset" value="1" class="btn btn-danger fw-bold"><i class="bi bi-trash3 me-1"></i> Reset / Delete All Data</button>
+                                </form>
                             <?php else: ?>
                                 <button class="btn btn-secondary fw-bold disabled">Please Fix Errors Above First</button>
                             <?php endif; ?>
