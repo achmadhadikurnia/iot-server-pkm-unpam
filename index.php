@@ -283,7 +283,7 @@ $device_colors = [
             <!-- Device Filter -->
             <?php if (!isset($error) && count($all_devices) > 0): ?>
             <div class="device-filter">
-                <button class="btn btn-outline-dark btn-sm fw-bold" onclick="document.getElementById('deviceDropdown').classList.toggle('show')">
+                <button class="btn btn-outline-secondary btn-sm fw-bold" onclick="document.getElementById('deviceDropdown').classList.toggle('show')">
                     📡 Devices (<?= count($selected_devices) ?>/<?= count($all_devices) ?>)
                 </button>
                 <div id="deviceDropdown" class="device-dropdown">
@@ -309,9 +309,9 @@ $device_colors = [
             </div>
             <?php endif; ?>
 
-            <button onclick="window.location.reload()" class="btn btn-success btn-sm fw-bold">🔄 Refresh</button>
-            <a href="simulator.php" class="btn btn-outline-secondary btn-sm fw-bold">IoT Simulator</a>
-            <a href="dashboard.php" class="btn btn-primary btn-sm fw-bold">View Full Data</a>
+            <button onclick="window.location.reload()" class="btn btn-outline-primary btn-sm fw-bold">🔄 Refresh</button>
+            <a href="simulator.php" class="btn btn-outline-secondary btn-sm fw-bold">🧪 Simulator</a>
+            <a href="dashboard.php" class="btn btn-primary btn-sm fw-bold">📊 Full Data</a>
         </div>
     </div>
     
