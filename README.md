@@ -38,7 +38,7 @@ Make a standard HTTP POST request natively from your microprocessor pointing to:
 ## 🛠 File Structure & Routing
 
 - `index.php` : The Web Simulator entrypoint.
-- `dashboard.php` : Paginated GUI to view inserted sensor records.
+- `logs.php` : Paginated GUI to view inserted sensor records.
 - `insert-sensor.php` : Secure webhook/API endpoint to ingest device payloads.
 - `database.php` : Core connection loader (Protected).
 - `setup.php` : Migration and Diagnostic system.
