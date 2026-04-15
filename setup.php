@@ -1,28 +1,16 @@
 <?php
-$envFile = __DIR__ . '/.env';
+include "database.php";
+
 $status = [
-    'env_exists' => false,
-    'db_connected' => false,
+    'env_exists'   => $db_env_exists,
+    'db_connected' => ($conn !== null),
     'table_exists' => false,
-    'error' => null,
-    'migrated' => false
+    'error'        => $db_error,
+    'migrated'     => false
 ];
 
-if (file_exists($envFile)) {
-    $status['env_exists'] = true;
-    $env = parse_ini_file($envFile);
-    $host = $env['DB_HOST'] ?? '127.0.0.1';
-    $port = $env['DB_PORT'] ?? 5432;
-    $db   = $env['DB_NAME'] ?? 'postgres';
-    $user = $env['DB_USER'] ?? 'postgres';
-    $pass = $env['DB_PASS'] ?? '';
-    
-    $dsn = "pgsql:host=$host;port=$port;dbname=$db";
-    
+if ($conn) {
     try {
-        $conn = new PDO($dsn, $user, $pass, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
-        $status['db_connected'] = true;
-        
         // Handle migration request
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['migrate'])) {
             $sql = "CREATE TABLE IF NOT EXISTS sensor_data (
@@ -35,18 +23,17 @@ if (file_exists($envFile)) {
             $conn->exec($sql);
             $status['migrated'] = true;
         }
-        
+
         // Check if table exists
         $stmt = $conn->query("SELECT EXISTS (
             SELECT FROM information_schema.tables 
             WHERE table_schema = 'public' 
             AND table_name = 'sensor_data'
         );");
-        
+
         if ($stmt->fetchColumn()) {
             $status['table_exists'] = true;
         }
-
     } catch (PDOException $e) {
         $status['error'] = $e->getMessage();
     }

@@ -1,6 +1,11 @@
 <?php
 include "database.php";
 
+if ($db_error || !$conn) {
+    http_response_code(500);
+    die("Database Error: " . htmlspecialchars($db_error ?? "Connection not available."));
+}
+
 // 1. Retrieve data from ESP32 or Simulator (Ensure POST variable names match the device code)
 if(isset($_POST['temperature']) && isset($_POST['humidity']) && isset($_POST['device_name'])) {
 
