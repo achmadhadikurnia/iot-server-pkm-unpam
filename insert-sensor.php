@@ -7,16 +7,24 @@ if(isset($_POST['temperature']) && isset($_POST['humidity']) && isset($_POST['de
     $temp = $_POST['temperature'];
     $humi = $_POST['humidity'];
     $device = $_POST['device_name'];
+    $created_at = isset($_POST['created_at']) && !empty($_POST['created_at']) ? $_POST['created_at'] : null;
 
     // 2. QUERY: Insert data into the table
     // Using PDO prepared statements for security against SQL Injection
-    $sql = "INSERT INTO sensor_data (temperature, humidity, device_name) VALUES (:temperature, :humidity, :device_name)";
+    if ($created_at) {
+        $sql = "INSERT INTO sensor_data (temperature, humidity, device_name, created_at) VALUES (:temperature, :humidity, :device_name, :created_at)";
+    } else {
+        $sql = "INSERT INTO sensor_data (temperature, humidity, device_name) VALUES (:temperature, :humidity, :device_name)";
+    }
 
     try {
         $stmt = $conn->prepare($sql);
         $stmt->bindParam(':temperature', $temp);
         $stmt->bindParam(':humidity', $humi);
         $stmt->bindParam(':device_name', $device);
+        if ($created_at) {
+            $stmt->bindParam(':created_at', $created_at);
+        }
         
         $stmt->execute();
         echo "SUCCESS! Data inserted successfully into the database.";

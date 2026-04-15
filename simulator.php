@@ -27,6 +27,10 @@
         <div class="card-body p-4">
             <div id="responseMessage" class="alert d-none" role="alert"></div>
             
+            <?php
+                $randomTemp = number_format(mt_rand(200, 350) / 10, 1);
+                $randomHum = number_format(mt_rand(400, 800) / 10, 1);
+            ?>
             <form id="sensorForm">
                 <div class="mb-3">
                     <label class="form-label text-muted fw-bold">Device Name</label>
@@ -34,28 +38,30 @@
                 </div>
                 <div class="mb-3">
                     <label class="form-label text-muted fw-bold">Temperature (°C)</label>
-                    <input type="number" step="0.01" class="form-control" name="temperature" id="tempInput" value="25.5" required>
-                    <input type="range" class="form-range mt-2" min="-10" max="50" step="0.1" value="25.5" oninput="document.getElementById('tempInput').value = this.value">
+                    <input type="number" step="0.01" class="form-control" name="temperature" id="tempInput" value="<?= $randomTemp ?>" required>
+                    <input type="range" class="form-range mt-2" min="-10" max="50" step="0.1" value="<?= $randomTemp ?>" oninput="document.getElementById('tempInput').value = this.value">
                 </div>
                 <div class="mb-4">
                     <label class="form-label text-muted fw-bold">Humidity (%)</label>
-                    <input type="number" step="0.01" class="form-control" name="humidity" id="humInput" value="60.0" required>
-                    <input type="range" class="form-range mt-2" min="0" max="100" step="0.1" value="60.0" oninput="document.getElementById('humInput').value = this.value">
+                    <input type="number" step="0.01" class="form-control" name="humidity" id="humInput" value="<?= $randomHum ?>" required>
+                    <input type="range" class="form-range mt-2" min="0" max="100" step="0.1" value="<?= $randomHum ?>" oninput="document.getElementById('humInput').value = this.value">
+                </div>
+                <div class="mb-4">
+                    <label class="form-label text-muted fw-bold">Created At (Optional)</label>
+                    <input type="datetime-local" class="form-control" name="created_at" id="created_at">
+                    <div class="form-text">Leave blank to use current server time.</div>
                 </div>
                 <button type="submit" class="btn btn-primary w-100 py-2 fw-bold" id="submitBtn">Send Simulator Data</button>
             </form>
             
             <hr class="my-4">
             
-            <div class="d-flex justify-content-center gap-2">
-                <a href="index.php" class="btn btn-outline-info btn-sm fw-bold">
-                    📈 Main Dashboard
+            <div class="d-flex justify-content-between align-items-center">
+                <a href="index.php" class="btn btn-outline-secondary btn-sm fw-bold">
+                    ⬅️ Back to Dashboard
                 </a>
-                <a href="dashboard.php" class="btn btn-outline-success btn-sm fw-bold">
-                    📊 View Recorded Data
-                </a>
-                <a href="setup.php" class="btn btn-outline-secondary btn-sm">
-                    ⚙️ Test Database Connection & Migration
+                <a href="bulk-simulator.php" class="btn btn-outline-dark btn-sm fw-bold">
+                    📦 Bulk Seeder ➡️
                 </a>
             </div>
         </div>
