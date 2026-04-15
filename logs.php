@@ -100,7 +100,7 @@ try {
                                             <td><span class="badge bg-primary rounded-pill"><?= htmlspecialchars($row['device_name']) ?></span></td>
                                             <td class="text-danger fw-bold"><?= htmlspecialchars($row['temperature']) ?> °C</td>
                                             <td class="text-info fw-bold"><?= htmlspecialchars($row['humidity']) ?> %</td>
-                                            <td class="text-muted"><small><?= htmlspecialchars(date('d M Y, H:i:s', strtotime($row['created_at']))) ?></small></td>
+                                            <td class="text-muted"><small class="local-time" data-utc="<?= htmlspecialchars(date('c', strtotime($row['created_at']))) ?>">Loading...</small></td>
                                         </tr>
                                     <?php endforeach; ?>
                                 <?php else: ?>
@@ -141,6 +141,20 @@ try {
         </div>
     </div>
 
+<script>
+    // Convert all UTC timestamps to the user's local timezone
+    document.querySelectorAll('.local-time').forEach(function(el) {
+        const utc = el.getAttribute('data-utc');
+        if (utc) {
+            const date = new Date(utc);
+            el.textContent = date.toLocaleDateString('en-GB', {
+                day: '2-digit', month: 'short', year: 'numeric'
+            }) + ', ' + date.toLocaleTimeString('en-GB', {
+                hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+            });
+        }
+    });
+</script>
 </body>
 
 </html>

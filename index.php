@@ -46,7 +46,7 @@ try {
     $stmtTemp->execute($selected_devices);
     $rowTemp = $stmtTemp->fetch(PDO::FETCH_ASSOC);
     $highest_temp = $rowTemp ? (float)$rowTemp['temperature'] : 0;
-    $highest_temp_time = $rowTemp ? date('d M Y, H:i:s', strtotime($rowTemp['created_at'])) : '-';
+    $highest_temp_time_utc = $rowTemp ? date('c', strtotime($rowTemp['created_at'])) : '';
     $highest_temp_device = $rowTemp ? $rowTemp['device_name'] : '-';
 
     // Highest Humidity within selected range & devices
@@ -54,7 +54,7 @@ try {
     $stmtHum->execute($selected_devices);
     $rowHum = $stmtHum->fetch(PDO::FETCH_ASSOC);
     $highest_hum = $rowHum ? (float)$rowHum['humidity'] : 0;
-    $highest_hum_time = $rowHum ? date('d M Y, H:i:s', strtotime($rowHum['created_at'])) : '-';
+    $highest_hum_time_utc = $rowHum ? date('c', strtotime($rowHum['created_at'])) : '';
     $highest_hum_device = $rowHum ? $rowHum['device_name'] : '-';
 
     // Trend Data with aggregation strategy per device
@@ -358,7 +358,7 @@ $device_colors = [
                         <div id="gaugeTemp" class="gauge-container"></div>
                         <p class="text-muted small mt-2 mb-0">
                             <span class="badge bg-primary rounded-pill"><?= htmlspecialchars($highest_temp_device) ?></span>
-                            on <strong class="text-dark"><?= $highest_temp_time ?></strong>
+                            on <strong class="text-dark local-time" data-utc="<?= $highest_temp_time_utc ?>">Loading...</strong>
                         </p>
                     </div>
                 </div>
@@ -368,7 +368,7 @@ $device_colors = [
                         <div id="gaugeHum" class="gauge-container"></div>
                         <p class="text-muted small mt-2 mb-0">
                             <span class="badge bg-primary rounded-pill"><?= htmlspecialchars($highest_hum_device) ?></span>
-                            on <strong class="text-dark"><?= $highest_hum_time ?></strong>
+                            on <strong class="text-dark local-time" data-utc="<?= $highest_hum_time_utc ?>">Loading...</strong>
                         </p>
                     </div>
                 </div>
@@ -622,6 +622,20 @@ $device_colors = [
                     const dropdown = document.getElementById('deviceDropdown');
                     const filter = e.target.closest('.device-filter');
                     if (!filter && dropdown) dropdown.classList.remove('show');
+                });
+                // Convert all UTC timestamps to the user's local timezone
+                document.querySelectorAll('.local-time').forEach(function(el) {
+                    const utc = el.getAttribute('data-utc');
+                    if (utc) {
+                        const date = new Date(utc);
+                        el.textContent = date.toLocaleDateString('en-GB', {
+                            day: '2-digit', month: 'short', year: 'numeric'
+                        }) + ', ' + date.toLocaleTimeString('en-GB', {
+                            hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+                        });
+                    } else {
+                        el.textContent = '-';
+                    }
                 });
             </script>
         <?php endif; ?>
