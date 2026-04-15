@@ -298,10 +298,11 @@ if (!isset($error)) {
         // Auto refresh countdown mechanism
         let timeLeft = 30;
         const countdownEl = document.getElementById('countdown');
-        setInterval(function() {
+        const refreshTimer = setInterval(function() {
             timeLeft--;
             if (countdownEl) countdownEl.innerText = Math.max(0, timeLeft);
             if (timeLeft <= 0) {
+                clearInterval(refreshTimer); // Hentikan timer agar tidak me-reload berkali-kali jika koneksi lambat
                 window.location.reload();
             }
         }, 1000);
