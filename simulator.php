@@ -80,6 +80,20 @@ document.getElementById('sensorForm').addEventListener('submit', function(e) {
     
     const formData = new FormData(this);
     
+    // Convert created_at to UTC before sending (database stores UTC)
+    const createdAtInput = document.getElementById('created_at');
+    if (createdAtInput.value) {
+        const localDate = new Date(createdAtInput.value);
+        const pad = (n) => String(n).padStart(2, '0');
+        const utcStr = localDate.getUTCFullYear() + '-' +
+            pad(localDate.getUTCMonth() + 1) + '-' +
+            pad(localDate.getUTCDate()) + ' ' +
+            pad(localDate.getUTCHours()) + ':' +
+            pad(localDate.getUTCMinutes()) + ':' +
+            pad(localDate.getUTCSeconds());
+        formData.set('created_at', utcStr);
+    }
+    
     fetch('insert-sensor.php', {
         method: 'POST',
         body: formData

@@ -97,9 +97,11 @@
 const now = new Date();
 const yesterday = new Date(now.getTime() - (24 * 60 * 60 * 1000));
 
-// Format for datetime-local input: YYYY-MM-DDThh:mm
+// Format for datetime-local input using LOCAL time: YYYY-MM-DDThh:mm
 const formatDateTime = (date) => {
-    return date.toISOString().slice(0, 16);
+    const pad = (n) => n < 10 ? '0' + n : n;
+    return date.getFullYear() + '-' + pad(date.getMonth() + 1) + '-' + pad(date.getDate()) +
+           'T' + pad(date.getHours()) + ':' + pad(date.getMinutes());
 };
 
 document.getElementById('start_date').value = formatDateTime(yesterday);
@@ -156,11 +158,13 @@ document.getElementById('bulkForm').addEventListener('submit', async function(e)
         // Let's use the local ISO string format that PHP can parse well: YYYY-MM-DDTHH:MM
         
         const pad = (n) => n < 10 ? '0' + n : n;
-        const formattedDate = currentDate.getFullYear() + "-" + 
-                              pad(currentDate.getMonth() + 1) + "-" + 
-                              pad(currentDate.getDate()) + " " + 
-                              pad(currentDate.getHours()) + ":" + 
-                              pad(currentDate.getMinutes()) + ":00";
+        // Convert to UTC before sending (database stores UTC)
+        const formattedDate = currentDate.getUTCFullYear() + "-" + 
+                              pad(currentDate.getUTCMonth() + 1) + "-" + 
+                              pad(currentDate.getUTCDate()) + " " + 
+                              pad(currentDate.getUTCHours()) + ":" + 
+                              pad(currentDate.getUTCMinutes()) + ":" +
+                              pad(currentDate.getUTCSeconds());
         
         // Generate random values
         const randomTemp = (Math.random() * (maxTemp - minTemp) + minTemp).toFixed(2);
