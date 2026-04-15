@@ -51,7 +51,6 @@ try {
         <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center rounded-top" style="border-start-start-radius: 15px; border-start-end-radius: 15px; padding: 1rem 1.5rem;">
             <div>
                 <h4 class="mb-0">Sensor Readings Dashboard</h4>
-                <p class="mb-0"><small class="text-light">Page <?= $page ?> of <?= $total_pages ?> (Total: <?= isset($total_records) ? $total_records : 0 ?> records)</small></p>
             </div>
             <div>
                 <a href="simulator.php" class="btn btn-outline-secondary btn-sm me-1">Simulator</a>
@@ -96,10 +95,13 @@ try {
                 </div>
                 
                 <!-- Pagination Controls -->
-                <?php if ($total_pages > 1): ?>
-                <div class="card-footer bg-white border-0 py-3 rounded-bottom" style="border-end-start-radius: 15px; border-end-end-radius: 15px;">
+                <!-- Pagination Controls -->
+                <div class="card-footer bg-light border-top py-3 d-flex flex-wrap justify-content-between align-items-center rounded-bottom" style="border-end-start-radius: 15px; border-end-end-radius: 15px;">
+                    <span class="text-muted small mb-2 mb-md-0">
+                        Showing page <strong><?= $page ?></strong> of <strong><?= $total_pages ?></strong> (Total: <strong><?= isset($total_records) ? $total_records : 0 ?></strong> records)
+                    </span>
                     <nav aria-label="Data Page Navigation">
-                        <ul class="pagination justify-content-center mb-0">
+                        <ul class="pagination pagination-sm mb-0">
                             <!-- Previous Button -->
                             <li class="page-item <?= ($page <= 1) ? 'disabled' : '' ?>">
                                 <a class="page-link" href="?page=<?= $page - 1 ?>" tabindex="-1">Previous</a>
@@ -112,7 +114,6 @@ try {
                         </ul>
                     </nav>
                 </div>
-                <?php endif; ?>
 
             <?php endif; ?>
         </div>
