@@ -1,15 +1,15 @@
-# Matikan fitur index directory (mencegah orang melihat isi folder)
+# Disable directory listing (prevent browsing folder contents)
 Options -Indexes
 
-# Blokir akses ke direktori yang diawali dengan titik dan file terkait
-<FilesMatch "^\.">
+# Block access to sensitive and configuration files
+<FilesMatch "^(\.env|\.env\.example|\.gitignore|\.htaccess|database\.php)$">
     Require all denied
     Order allow,deny
     Deny from all
 </FilesMatch>
 
-# Mencegah database.php diakses secara langsung dari browser
-<FilesMatch "^database\.php$">
+# Fallback protection for all dotfiles
+<FilesMatch "^\.">
     Require all denied
     Order allow,deny
     Deny from all
