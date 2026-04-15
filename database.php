@@ -1,4 +1,10 @@
 <?php
+// Prevent direct access to this file
+if (realpath(__FILE__) === realpath($_SERVER['SCRIPT_FILENAME'])) {
+    http_response_code(403);
+    die("Direct access not permitted.");
+}
+
 // Load credentials from .env file
 $envFile = __DIR__ . '/.env';
 if (file_exists($envFile)) {
