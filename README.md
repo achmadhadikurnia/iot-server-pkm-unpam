@@ -1,5 +1,9 @@
 # IoT Sensor Server (PKM UNPAM)
 
+<p align="center">
+  <img src="screenshots/overview.png" alt="IoT Sensor Server Overview" width="100%" />
+</p>
+
 A lightweight, secure, and procedural PHP web application designed to act as a robust endpoint for IoT devices (e.g., ESP32/ESP8266, Arduino). It receives real-time environment data—typically Temperature and Humidity—and securely records it into a Supabase PostgreSQL database.
 
 This project was built for the **PKM (Pengabdian Kepada Masyarakat)** program by students of **Universitas Pamulang (UNPAM)**.
