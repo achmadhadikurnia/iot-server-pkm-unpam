@@ -1,14 +1,16 @@
 # IoT Sensor Server (PKM UNPAM)
 
-A lightweight, secure, and procedural PHP web application designed to act as a robust endpoint for IoT devices (e.g., ESP32/ESP8266, Arduino). It receives real-time environment data—typically Temperature and Humidity—and securely records it into a Supabase PostgreSQL database. 
+A lightweight, secure, and procedural PHP web application designed to act as a robust endpoint for IoT devices (e.g., ESP32/ESP8266, Arduino). It receives real-time environment data—typically Temperature and Humidity—and securely records it into a Supabase PostgreSQL database.
 
 This project was built for the **PKM (Pengabdian Kepada Masyarakat)** program by students of **Universitas Pamulang (UNPAM)**.
+
+This PKM was conducted at **Madrasah Aliyah Da'il Khairaat**, Kalideres, West Jakarta on **April 16, 2026**. You can read the full article on the project lead's post [here](https://www.kompasiana.com/riosatriatama2801/69e4402634777c09f04cd8d3/mahasiswa-s2-teknik-informatika-universitas-pamulang-gelar-pelatihan-iot-berbasis-proyek-di-madrasah-aliyah-da-il-khairaat).
 
 ## ✨ Features
 
 - **Advanced Data Dashboard (`index.php`)**: A premium Bootstrap 5-based analytical dashboard featuring data gauges, highest-value badges, line charts for trend analysis, and time-range filtering per device.
 - **Data Logs (`logs.php`)**: A paginated, searchable grid interface for viewing historical sensor records effortlessly.
-- **Built-in Simulators**: 
+- **Built-in Simulators**:
   - **Single Simulator (`simulator.php`)**: Send single mock data payloads for testing.
   - **Bulk Simulator (`bulk-simulator.php`)**: Programmatically generate and push massive amounts of dummy historical data over a defined timeframe.
 - **Secure Supabase Postgres Connect**: Fully migrated to modern `PDO pgsql` featuring built-in emulation mode (`PDO::ATTR_EMULATE_PREPARES=true`) to natively support **pgBouncer pooler connections** (port 6543). Robust Prepared Statements guard against SQL injection.
@@ -31,7 +33,7 @@ This project was built for the **PKM (Pengabdian Kepada Masyarakat)** program by
 5. Once your PostgreSQL connection shows **Green**, click the **"Run Database Migration Now"** button to automatically deploy the `sensor_data` table schema.
 
 ## 📡 Hardware Integration (ESP32 / Arduino C++)
-Make a standard HTTP POST request natively from your microprocessor pointing to: 
+Make a standard HTTP POST request natively from your microprocessor pointing to:
 `http://your-domain.com/insert-sensor.php`
 
 **Expected Payload (POST/x-www-form-urlencoded):**
